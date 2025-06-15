@@ -55,12 +55,6 @@ class Chunker:
         matches = re.findall(pattern, content, re.DOTALL)
         return [match[0].strip() for match in matches]
 
-    def chunk_exercises(self, content: str) -> List[str]:
-        """Chunk par exercice avec reconnaissance des balises [Exercice n]{.smallcaps}"""
-        pattern = r"(\[Exercice\s+\d+\]\{\.smallcaps\}.*?)((?=\[Exercice\s+\d+\]\{\.smallcaps\})|$)"
-        matches = re.findall(pattern, content, re.DOTALL)
-        return [match[0].strip() for match in matches]
-
     def _flush_chunk(self, headers: List[Tuple[int, str]], lines: List[str], chunks: List[str]):
         if lines:
             header_prefix = "\n".join(f"{'#' * level} {text}" for level, text in headers)
