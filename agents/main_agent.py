@@ -189,7 +189,8 @@ class STEMLearningAgent(ToolCallingAgent):
             tools=tools, 
             model=model,
             *args, 
-            **kwargs
+            **kwargs,
+            max_steps=3
         )
 
         
@@ -247,6 +248,6 @@ if __name__ == "__main__":
     # Save the conversation memory before exiting
     try:
         print("\n💾 Saving conversation memory...")
-        agent.save_memories()
+        save_memories()
     except Exception as e:
         print(f"\n⚠️ Warning: Could not save conversation memory: {str(e)}")
