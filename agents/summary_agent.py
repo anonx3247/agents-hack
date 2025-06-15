@@ -1,4 +1,4 @@
-from smolagents import Agent, tool, LiteLLMModel
+from smolagents import CodeAgent, tool, LiteLLMModel
 import os
 import datetime
 
@@ -19,105 +19,141 @@ Your responsibilities:
 - If the memory file is empty, try to infer or ask for the student's background and current learning topics.
 """
 
-MEMORY_FILE_PATH = "student_memory.json"  # You can customize this path as needed
+memory_file = "student_memory.md"  # You can customize this path as needed
 
-class SummaryAgent(Agent):
+model = LiteLLMModel(
+    model="claude-3-5-haiku-20241022",
+    api_key="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"
+)
+
+def summarize_conversation(conversation: str) -> str:
     """
-    Agent to summarize student conversations and manage the memory file for future personalization.
+    Generate a concise summary of a student conversation, highlighting key learning points and challenges.
+    
+    Args:
+        conversation (str): The complete conversation text to be analyzed
+        
+    Returns:
+        str: A structured summary containing:
+            - Student's struggles and challenges
+            - Topics covered in the session
+            - Exercises or problems attempted
+            - Learning outcomes and improvements
     """
-    def __init__(self, memory_file: str = MEMORY_FILE_PATH, *args, **kwargs):
-        # Set Claude Sonnet 4 as the model
-        model = LiteLLMModel(
-            model="claude-3-5-haiku-20241022",
-            api_key="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"
-        )
-        super().__init__(model=model, *args, **kwargs)
-        self.memory_file = memory_file
-        self.system_prompt = SUMMARY_AGENT_PROMPT
+    prompt = f"""Please summarize this conversation, focusing on:
+1. What the student struggled with
+2. What topics were covered
+3. What exercises/problems were attempted or seen
+4. What the student learned or improved on
 
-    @tool
-    def summarize_conversation(self, conversation: str) -> str:
-        """
-        Summarize a conversation, focusing on struggles, topics, exercises, and learning outcomes. Update the memory file accordingly.
-        """
-        # TODO: Use LLM to generate a summary from the conversation string
-        summary = f"[Summary of conversation: {conversation[:50]}...]"  # Placeholder
-        self._update_memory_file(summary)
-        return summary
+Conversation:
+{conversation}
 
-    @tool
-    def summarize_memory(self, memory: str) -> str:
-        """
-        Summarize the memory file, focusing on struggles, topics, exercises, and learning outcomes.
-        """
-        # TODO: Use LLM to generate a summary from the memory string
-    @tool
-    def read_memory(self) -> str:
-        """
-        Read the current memory file contents.
-        """
-        if not os.path.exists(self.memory_file):
-            return ""
-        with open(self.memory_file, "r") as f:
-            return f.read()
+Provide a concise summary that captures the key points."""
+    messages = [
+        {
+            "role": "system",
+            "content": SUMMARY_AGENT_PROMPT
+        },
+        {
+            "role": "user",
+            "content": prompt
+        }
+    ]
+    return model.generate(messages).content
 
-    @tool
-    def write_memory(self, content: str) -> str:
-        """
-        Overwrite the memory file with new content.
-        """
-        with open(self.memory_file, "w") as f:
-            f.write(content)
-        return "Memory file updated."
-
-    def _update_memory_file(self, new_summary: str):
-        """
-        Internal method to update the memory file, keeping it concise.
-        """
-        old_content = self.read_memory()
-        # TODO: Implement logic to merge new_summary with old_content, trim if too long
-        updated_content = (old_content + "\n" + new_summary).strip()
-        # Example: keep only last 2000 characters
-        if len(updated_content) > 2000:
-            updated_content = updated_content[-2000:]
-        self.write_memory(updated_content)
-
-def process_new_conversation(agent: SummaryAgent, conversation_path: str):
+def summarize_memory(memory: str) -> str:
     """
-    Working loop for summarizing a new conversation and updating the memory file.
-    1. Read the latest conversation
-    2. Summarize it
-    3. Read the memory file
-    4. If memory file > 2000 chars, prompt agent to summarize/condense it
-    5. Otherwise, leave unchanged
-    6. Append the summary of last interaction to the file, prepending the date
+    Condense the student's memory file while preserving critical learning information.
+    
+    Args:
+        memory (str): The current memory file content to be condensed
+        
+    Returns:
+        str: A condensed version of the memory file containing:
+            - Student's learning background and current topics
+            - Recent challenges and progress
+            - Latest covered material and exercises
+            - Key learning achievements
+    """
+    prompt = f"""Please condense this memory file while preserving the most important information about:
+1. Student's background and current learning topics
+2. Recent struggles and improvements
+3. Latest topics and exercises covered
+4. Key learning outcomes
+
+Memory content:
+{memory}
+
+Provide a concise summary that maintains the essential information."""
+    messages = [
+        {
+            "role": "system",
+            "content": SUMMARY_AGENT_PROMPT
+        },
+        {
+            "role": "user",
+            "content": prompt
+        }
+    ]
+    return model.generate(messages).content
+
+def read_memory() -> str:
+    """
+    Retrieve the current contents of the student's memory file.
+    
+    Returns:
+        str: The complete contents of the memory file if it exists,
+             an empty string if the file doesn't exist
+    """
+    if not os.path.exists(memory_file):
+        return ""
+    with open(memory_file, "r") as f:
+        return f.read()
+
+def write_memory(content: str) -> str:
+    """
+    Update the student's memory file with new content.
+    
+    Args:
+        content (str): The new content to write to the memory file
+        
+    Returns:
+        str: Confirmation message indicating successful update
+    """
+    with open(memory_file, "w") as f:
+        f.write(content)
+    return "Memory file updated."
+
+def update_memory(conversation: str):
+    """
+    Process and store a new conversation in the student's memory file.
+    
+    Args:
+        conversation (str): The conversation to be summarized
+        
+    Process:
+        1. Reads and summarizes the latest conversation
+        2. Adds timestamp to the summary
+        3. Manages memory file size by condensing if necessary
+        4. Updates the memory file with the new summary
     """
     # 1. Read the latest conversation
-    with open(conversation_path, 'r') as f:
-        conversation = f.read()
-
     # 2. Summarize it
-    summary = agent.summarize_conversation(conversation)
+    summary = summarize_conversation(conversation)
     date_str = datetime.datetime.now().strftime('%Y-%m-%d')
     dated_summary = f"[{date_str}]\n{summary}"
 
     # 3. Read the memory file
-    memory = agent.read_memory()
+    memory = read_memory()
 
     # 4. If memory file > 2000 chars, condense it
     if len(memory) > 2000:
         print("Memory file too long, condensing...")
-        # Prompt the agent to summarize/condense the memory
-        condensed = agent.summarize_memory(memory)
+        condensed = summarize_memory(memory)
         memory = f"[Condensed on {date_str}] {condensed}"
 
     # 6. Append the summary of last interaction to the file
     updated_memory = (memory + "\n" + dated_summary).strip() if memory else dated_summary
-    agent.write_memory(updated_memory)
+    write_memory(updated_memory)
     print("Memory file updated.")
-
-# Example usage
-if __name__ == "__main__":
-    agent = SummaryAgent()
-    # Replace 'latest_conversation.txt' with your actual conversation file path
-    process_new_conversation(agent, 'latest_conversation.txt') 
