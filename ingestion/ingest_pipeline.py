@@ -1,8 +1,8 @@
 import os
 from pathlib import Path
 from dotenv import load_dotenv
-from md_utils import PDFLoader, MarkdownConverter, Chunker
-from db_loader import VectorStoreLoader
+from .md_utils import PDFLoader, MarkdownConverter, Chunker
+from .db_loader import VectorStoreLoader
 import argparse
 
 class Pipeline:
