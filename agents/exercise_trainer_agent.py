@@ -16,6 +16,15 @@ Guidelines:
 
 @dataclass  
 class Exercise:
+    """
+    A data class representing a STEM exercise with its associated metadata.
+    
+    Attributes:
+        id (str): Unique identifier for the exercise
+        problem (str): The exercise problem statement
+        hints (str): Step-by-step hints to guide the student
+        solution (str): The complete solution to the exercise
+    """
     id: str
     problem: str
     hints: str
@@ -41,14 +50,20 @@ def add_exercise(exercise: Exercise) -> None:
     Add an exercise to the database.
     
     Args:
-        exercise (Exercise): The exercise to add
+        exercise (Exercise): The exercise to add to the database
     """
     _exercise_db[exercise.id] = exercise
 
 @tool
 def consult_hints(exercise_id: str) -> str:
     """
-    Consult the tips for the given exercise.
+    Retrieve and return the hints for a specific exercise.
+    
+    Args:
+        exercise_id (str): The ID of the exercise to get hints for
+        
+    Returns:
+        str: The hints for the exercise if found, or an error message if not found
     """
     exercise = get_exercise(exercise_id)
     if not exercise:
@@ -57,7 +72,13 @@ def consult_hints(exercise_id: str) -> str:
 
 def consult_solution(exercise_id: str) -> str:
     """
-    Consult the solution for the given exercise.
+    Retrieve and return the solution for a specific exercise.
+    
+    Args:
+        exercise_id (str): The ID of the exercise to get the solution for
+        
+    Returns:
+        str: The solution for the exercise if found, or an error message if not found
     """
     exercise = get_exercise(exercise_id)
     if not exercise:
@@ -67,8 +88,25 @@ def consult_solution(exercise_id: str) -> str:
 class ExerciseTrainerAgent(MultiStepAgent):
     """
     Agent dedicated to guiding a student through a specific exercise step by step.
+    Provides interactive guidance, hints, and solutions while encouraging student learning.
+    
+    Attributes:
+        exercise (Exercise): The current exercise being worked on
+        memory_summary (str): Summary of previous interactions with the student
     """
     def __init__(self, exercise_id: str, memory_summary: str = "", *args, **kwargs):
+        """
+        Initialize the ExerciseTrainerAgent with a specific exercise and optional memory context.
+        
+        Args:
+            exercise_id (str): The ID of the exercise to work on
+            memory_summary (str, optional): Summary of previous interactions. Defaults to "".
+            *args: Additional positional arguments for MultiStepAgent
+            **kwargs: Additional keyword arguments for MultiStepAgent
+            
+        Raises:
+            ValueError: If the specified exercise is not found in the database
+        """
         model = LiteLLMModel(
             model="claude-opus-4-20250514", 
             api_key="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"

@@ -1,8 +1,37 @@
-from smolagents import MultiStepAgent, tool, WikipediaSearchTool, LiteLLMModel
+import os
+import sys
+from pathlib import Path
+
+# Add the project root to Python path
+project_root = str(Path(__file__).parent.parent)
+if project_root not in sys.path:
+    sys.path.append(project_root)
+
+from smolagents import ToolCallingAgent, tool, WikipediaSearchTool, LiteLLMModel
 # Add this import for Claude Sonnet 4 model integration
 # from smolagents import LiteLLMModel
-from agents.summary_agent import update_memory
+from agents.memory_agent import update_memory
 from agents.exercise_trainer_agent import ExerciseTrainerAgent, Exercise
+from agents.exercise_summarizer import summarize_exercises
+from langchain_community.vectorstores import Chroma
+from langchain.embeddings import HuggingFaceEmbeddings
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Initialize ChromaDB connection
+embeddings = HuggingFaceEmbeddings(model_name=os.getenv("EMBEDDING_MODEL"))
+problems_db = Chroma(
+    collection_name="exos",
+    embedding_function=embeddings,
+    persist_directory=os.getenv("CHROMA_DB_DIR")
+)
+notes_db = Chroma(
+    collection_name="class-notes",
+    embedding_function=embeddings,
+    persist_directory=os.getenv("CHROMA_DB_DIR")
+)
 
 # Placeholder imports for ChromaDB and memory handling
 # from chromadb import Client as ChromaClient
@@ -29,6 +58,36 @@ Guidelines:
 - Only provide the final answer if the student insists or is unable to proceed after multiple hints.
 """
 
+PLANNING_PROMPT = """
+Let's break down the student's request and plan how to help them:
+
+1. What is the student asking for?
+2. What tools might be helpful?
+3. What approach should we take?
+
+Let's think step by step.
+"""
+
+FINAL_ANSWER_PROMPT = """
+Based on our interaction, here's what I've learned and how I can help:
+
+1. The student's request: {request}
+2. The approach we took: {approach}
+3. The outcome: {outcome}
+
+Let me provide a clear, helpful response.
+"""
+
+MANAGED_AGENT_PROMPT = """
+You are managing a STEM learning session. Your role is to:
+1. Understand the student's needs
+2. Choose appropriate tools and approaches
+3. Guide the student through the learning process
+4. Ensure they understand the concepts
+
+Remember to be patient, encouraging, and adapt to the student's level.
+"""
+
 @tool
 def doc_research(query: str) -> str:
     """
@@ -40,8 +99,18 @@ def doc_research(query: str) -> str:
     Returns:
         str: The research results from documentation and class notes
     """
-    # TODO: Implement RAG search over docs_db and notes_db
-    return "[Doc research result placeholder]"
+    # Search for relevant content in class notes
+    results = notes_db.similarity_search(query, k=10)
+    
+    if not results:
+        return "I couldn't find any relevant information in the class notes."
+    
+    # Format the results
+    formatted_results = []
+    for i, doc in enumerate(results, 1):
+        formatted_results.append(f"Result {i}:\n{doc.page_content}\n")
+    
+    return "Here's what I found in the class notes:\n\n" + "\n".join(formatted_results)
 
 @tool
 def exercise_search(topic: str) -> str:
@@ -54,12 +123,19 @@ def exercise_search(topic: str) -> str:
     Returns:
         str: A recommended exercise and prompt asking if the user wants more practice
     """
-    # TODO: Fetch 10 exercises from problems_db
-    exercises = [f"Exercise {i+1} for {topic}" for i in range(10)]  # Placeholder
-    # TODO: Implement selection logic (e.g., based on difficulty, relevance, or user history)
-    selected = exercises[0]  # Placeholder: select the first one
-    # In a real implementation, you might return a list or ask the user to choose
-    return f"Recommended exercise: {selected}\nWould you like to practice more exercises?"
+    # Search for relevant exercises using vector similarity
+    results = problems_db.similarity_search(topic, k=10)
+    
+    # Create exercise IDs and content pairs for summarization
+    exercise_pairs = [(f"ex_{i+1}", doc.page_content) for i, doc in enumerate(results)]
+    
+    # Get summarized titles for all exercises
+    summarized_exercises = summarize_exercises(exercise_pairs)
+    
+    # Format the exercises with their titles
+    formatted_exercises = "\n".join([f"{i+1}. [id: {ex_id}] {title}" for i, (ex_id, title) in enumerate(summarized_exercises)])
+    
+    return f"Relevant exercises:\n{formatted_exercises}"
 
 @tool
 def train_on_exercise(exercise_id: str) -> str:
@@ -89,7 +165,8 @@ def save_memories() -> str:
     update_memory(conversation)
     return f"Conversation processed and memory updated successfully."
 
-class STEMLearningAgent(MultiStepAgent):
+
+class STEMLearningAgent(ToolCallingAgent):
     """
     Specialized agent to help STEM students learn better.
     Features:
@@ -125,19 +202,72 @@ class STEMLearningAgent(MultiStepAgent):
                 extract_format="WIKI"
             )
         ]
+
+        self.memory_summary = memory_summary
         
         super().__init__(
             tools=tools, 
-            model=model, 
-            prompt_templates={"system": AGENT_SYSTEM_PROMPT + f"\nPrevious conversation: {memory_summary}\n"},
+            model=model,
             *args, 
             **kwargs
         )
-        self.memory_summary = memory_summary
+
+        
+
+    def initialize_system_prompt(self) -> str:
+        """
+        Initialize the system prompt for the agent.
+        
+        Returns:
+            str: The system prompt
+        """
+        return AGENT_SYSTEM_PROMPT + f"\nPrevious conversation: {self.memory_summary}\n"
+    
+    def run(self, user_input: str) -> str:
+        """
+        Run the agent with the given user input.
+        
+        Args:
+            user_input (str): The user's input
+            
+        Returns:
+            str: The agent's response
+        """
+        print("\n🤔 Thinking...")
+        return super().run(user_input)
 
 agent = STEMLearningAgent()
 
 # Example instantiation (customize as needed)
 if __name__ == "__main__":
-    agent = STEMLearningAgent(memory_summary="Student struggled with integrals last session.")
-    # Example: agent.run() or integrate with your server framework
+    # Initialize the agent with empty memory
+    agent = STEMLearningAgent(memory_summary="")
+    
+    print("🤖 Welcome to Gauss, your STEM learning assistant!")
+    print("Type 'exit' or 'quit' to end the conversation.\n")
+    
+    while True:
+        # Get user input
+        user_input = input("\nYou: ").strip()
+        
+        # Check for exit command
+        if user_input.lower() in ['exit', 'quit']:
+            print("\nGoodbye! Have a great day of learning! 👋")
+            break
+            
+        try:
+            # Get agent's response
+            response = agent.run(user_input)
+            
+            # Print the response
+            print("\nGauss:", response)
+            
+        except Exception as e:
+            print(f"\n❌ Error: {str(e)}")
+            
+    # Save the conversation memory before exiting
+    try:
+        print("\n💾 Saving conversation memory...")
+        agent.save_memories()
+    except Exception as e:
+        print(f"\n⚠️ Warning: Could not save conversation memory: {str(e)}")
