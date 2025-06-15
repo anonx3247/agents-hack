@@ -147,10 +147,6 @@ def chat():
 @app.route('/save', methods=['POST'])
 def save():
     try:
-        # Make sure we have access to the agent's memories
-        if not hasattr(agent, 'memories'):
-            return jsonify({'error': 'Agent memories not initialized'}), 500
-            
         save_memories()
         return jsonify({'message': 'Memories saved successfully'}), 200
     except Exception as e:
