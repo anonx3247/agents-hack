@@ -23,7 +23,7 @@ load_dotenv()
 # Initialize ChromaDB connection
 embeddings = HuggingFaceEmbeddings(model_name=os.getenv("EMBEDDING_MODEL"))
 problems_db = Chroma(
-    collection_name="exos",
+    collection_name="pb_solutions",
     embedding_function=embeddings,
     persist_directory=os.getenv("CHROMA_DB_DIR")
 )
@@ -79,18 +79,30 @@ def doc_research(query: str) -> str:
     return "Here's what I found in the class notes:\n\n" + "\n".join(formatted_results)
 
 @tool
-def exercise_search(topic: str) -> str:
+def exercise_search(topic: str, problem_types: list = None) -> str:
     """
     Find and recommend exercises/problems for a given topic. Fetches 10 results and selects the best to present to the user. Always ask if they want to practice more after giving one.
     
     Args:
         topic (str): The topic or subject area to find exercises for
+        problem_types (list, optional): A list of accepted `problem_type` values to filter on (e.g., ["Geometry", "Algebra"]). If provided, only exercises with matching problem_type will be considered.
         
     Returns:
         str: A recommended exercise and prompt asking if the user wants more practice
     """
+    # Prepare filter dictionary if problem_types are provided
+    filter_dict = {}
+    if problem_types:
+        # Chroma ne supporte pas directement les OR dans une liste -> on boucle plus tard si nécessaire
+        # ici on prend le cas simple : un seul type
+        if len(problem_types) == 1:
+            filter_dict = {"problem_type": problem_types[0]}
+        else:
+            or_list = [{"problem_type": pt} for pt in problem_types]
+            filter_dict = {"$or": or_list}
+
     # Search for relevant exercises using vector similarity
-    results = problems_db.similarity_search(topic, k=10)
+    results = problems_db.similarity_search(topic, k=10, filter=filter_dict if filter_dict else None)
     
     # Create exercise IDs and content pairs for summarization
     exercise_pairs = [(f"ex_{i+1}", doc.page_content) for i, doc in enumerate(results)]
@@ -99,7 +111,12 @@ def exercise_search(topic: str) -> str:
     summarized_exercises = summarize_exercises(exercise_pairs)
     
     # Format the exercises with their titles
-    formatted_exercises = "\n".join([f"{i+1}. [id: {ex_id}] {title}" for i, (ex_id, title) in enumerate(summarized_exercises)])
+    formatted_exercises = []
+    for i, (ex_id, title) in enumerate(summarized_exercises):
+        doc = results[i]
+        meta_lines = "\n    ".join([f"{key}: {value}" for key, value in doc.metadata.items()])
+        formatted = f"{i+1}. [id: {ex_id}] {title}\n    {meta_lines}"
+        formatted_exercises.append(formatted)
     
     return f"Relevant exercises:\n{formatted_exercises}"
 
