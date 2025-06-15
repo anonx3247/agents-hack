@@ -2,8 +2,8 @@ from smolagents import CodeAgent, tool, LiteLLMModel
 import os
 import datetime
 
-SUMMARY_AGENT_PROMPT = """
-You are a summary agent for a STEM learning assistant. Your job is to maintain a concise memory file for each student, which will be used to personalize future interactions.
+MEMORY_AGENT_PROMPT = """
+You are a memory agent for a STEM learning assistant. Your job is to maintain a concise memory file for each student, which will be used to personalize future interactions.
 
 Your responsibilities:
 - Summarize each conversation, focusing on:
@@ -28,13 +28,13 @@ model = LiteLLMModel(
 
 def summarize_conversation(conversation: str) -> str:
     """
-    Generate a concise summary of a student conversation, highlighting key learning points and challenges.
+    Generate a concise memory of a student conversation, highlighting key learning points and challenges.
     
     Args:
         conversation (str): The complete conversation text to be analyzed
         
     Returns:
-        str: A structured summary containing:
+        str: A structured memory containing:
             - Student's struggles and challenges
             - Topics covered in the session
             - Exercises or problems attempted
@@ -49,11 +49,11 @@ def summarize_conversation(conversation: str) -> str:
 Conversation:
 {conversation}
 
-Provide a concise summary that captures the key points."""
+Provide a concise memory that captures the key points."""
     messages = [
         {
             "role": "system",
-            "content": SUMMARY_AGENT_PROMPT
+            "content": MEMORY_AGENT_PROMPT
         },
         {
             "role": "user",
@@ -85,11 +85,11 @@ def summarize_memory(memory: str) -> str:
 Memory content:
 {memory}
 
-Provide a concise summary that maintains the essential information."""
+Provide a concise memory that maintains the essential information."""
     messages = [
         {
             "role": "system",
-            "content": SUMMARY_AGENT_PROMPT
+            "content": MEMORY_AGENT_PROMPT
         },
         {
             "role": "user",
@@ -134,15 +134,15 @@ def update_memory(conversation: str):
         
     Process:
         1. Reads and summarizes the latest conversation
-        2. Adds timestamp to the summary
+        2. Adds timestamp to the memory
         3. Manages memory file size by condensing if necessary
-        4. Updates the memory file with the new summary
+        4. Updates the memory file with the new memory
     """
     # 1. Read the latest conversation
     # 2. Summarize it
-    summary = summarize_conversation(conversation)
+    memory = summarize_conversation(conversation)
     date_str = datetime.datetime.now().strftime('%Y-%m-%d')
-    dated_summary = f"[{date_str}]\n{summary}"
+    dated_memory = f"[{date_str}]\n{memory}"
 
     # 3. Read the memory file
     memory = read_memory()
@@ -153,7 +153,7 @@ def update_memory(conversation: str):
         condensed = summarize_memory(memory)
         memory = f"[Condensed on {date_str}] {condensed}"
 
-    # 6. Append the summary of last interaction to the file
-    updated_memory = (memory + "\n" + dated_summary).strip() if memory else dated_summary
+    # 6. Append the memory of last interaction to the file
+    updated_memory = (memory + "\n" + dated_memory).strip() if memory else dated_memory
     write_memory(updated_memory)
     print("Memory file updated.")

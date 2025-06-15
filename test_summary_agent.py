@@ -1,6 +1,6 @@
 
 import datetime
-from agents.summary_agent import update_memory
+from agents.memory_agent import update_memory
 
 latest_conversation = """
 Agent: Hi Alex! Today we're going to practice integrating x^2 from 0 to 1. Are you ready?
