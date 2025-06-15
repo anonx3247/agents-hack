@@ -29,6 +29,9 @@ class Pipeline:
 
         if self.source_type == "pdf":
             pdf_paths = self.loader.load_pdfs()
+            if not pdf_paths:
+                raise ValueError("No PDF files found in the source directory")
+                
             md_paths = []
             for pdf_path in pdf_paths:
                 md_path = self.converter.convert_pdf_to_markdown(pdf_path)
@@ -41,10 +44,17 @@ class Pipeline:
             self.vectorstore.add_documents(chunks, collection_name=collection_name)
 
         elif self.source_type == "class-notes":
-            class_notes_dir = Path(self.source_dir) / "class-notes"
-            md_paths = list(class_notes_dir.glob("*.md"))
-            md_paths = [str(p) for p in md_paths]
-            print(f"Found {len(md_paths)} markdown file(s) in {class_notes_dir}")
+            # Handle both directory and single file
+            if os.path.isfile(self.source_dir):
+                md_paths = [self.source_dir]
+            else:
+                md_paths = list(Path(self.source_dir).glob("*.md"))
+                md_paths = [str(p) for p in md_paths]
+            
+            if not md_paths:
+                raise ValueError(f"No markdown files found in {self.source_dir}")
+
+            print(f"Found {len(md_paths)} markdown file(s) in {self.source_dir}")
 
             chunks = []
             for md_path in md_paths:
@@ -53,9 +63,9 @@ class Pipeline:
             self.vectorstore.add_documents(chunks, collection_name=collection_name)
 
         elif self.source_type == "exos":
-            exos_md = Path(self.source_dir) / "exos.md"
+            exos_md = Path(self.source_dir)
             if not exos_md.exists():
-                raise FileNotFoundError(f"Le fichier exos.md est introuvable dans {self.source_dir}")
+                raise FileNotFoundError(f"Exercise file not found: {self.source_dir}")
             
             chunks = self.chunker.chunk_exercises(exos_md.read_text(encoding="utf-8"))
             collection_name = "exos"
@@ -68,6 +78,10 @@ class Pipeline:
         else:
             raise ValueError(f"Unknown source_type: {self.source_type}")
 
+        if not chunks:
+            raise ValueError("No content chunks were generated from the input files")
+
+        self.vectorstore.add_documents(chunks, collection_name=collection_name)
         print("Ingestion completed.")
 
 # python ./ingestion/ingest_pipeline.py --source [pdf|class-notes|exos]
