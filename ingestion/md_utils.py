@@ -68,7 +68,7 @@ class Chunker:
             return len(match.group(1)), match.group(2).strip()
         return None
 
-    def chunk_markdown_with_headers(self, md_path: str, max_chars: int = 2000) -> List[str]:
+    def chunk_markdown_with_headers(self, md_path: str, max_chars: int = 5000) -> List[str]:
         """Chunk markdown en respectant la hiérarchie des headers pour chaque chunk."""
         print(f"Splitting markdown with header context: {md_path}")
         with open(md_path, "r", encoding="utf-8") as f:

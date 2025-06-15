@@ -38,6 +38,7 @@ class Pipeline:
             for md_path in md_paths:
                 chunks += self.chunker.chunk_markdown(md_path)
             collection_name = "pdfs"
+            self.vectorstore.add_documents(chunks, collection_name=collection_name)
 
         elif self.source_type == "class-notes":
             class_notes_dir = Path(self.source_dir) / "class-notes"
@@ -49,6 +50,7 @@ class Pipeline:
             for md_path in md_paths:
                 chunks += self.chunker.chunk_markdown_with_headers(md_path)
             collection_name = "class-notes"
+            self.vectorstore.add_documents(chunks, collection_name=collection_name)
 
         elif self.source_type == "exos":
             exos_md = Path(self.source_dir) / "exos.md"
@@ -57,10 +59,14 @@ class Pipeline:
             
             chunks = self.chunker.chunk_exercises(exos_md.read_text(encoding="utf-8"))
             collection_name = "exos"
+            self.vectorstore.add_documents(chunks, collection_name=collection_name)
+
+        elif self.source_type == "pb-solutions":
+           
+            self.vectorstore.ingest_olympiads_dataset_to_chromadb()
+            collection_name = "pb_solutions"
         else:
             raise ValueError(f"Unknown source_type: {self.source_type}")
-
-        self.vectorstore.add_documents(chunks, collection_name=collection_name)
 
         print("Ingestion completed.")
 
@@ -71,7 +77,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run document ingestion pipeline.")
     parser.add_argument(
         "--source", 
-        choices=["pdf", "class-notes", "exos"], 
+        choices=["pdf", "class-notes", "exos", "pb-solutions"], 
         required=True, 
         help="Data source type: 'pdf' to extract from PDFs, 'class-notes' or 'exos' to use existing markdown files."
     )
