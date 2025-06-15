@@ -5,10 +5,9 @@ import json
 from pathlib import Path
 from ingestion.ingest_pipeline import Pipeline
 from dotenv import load_dotenv
-from agents.main_agent import STEMLearningAgent, save_memories
+from agents.main_agent import agent, save_memories
 # Load environment variables
 
-agent = STEMLearningAgent()
 
 load_dotenv()
 

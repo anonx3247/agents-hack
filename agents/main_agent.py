@@ -217,11 +217,13 @@ class STEMLearningAgent(ToolCallingAgent):
         """
         print("\n🤔 Thinking...")
         return super().run(user_input)
+    
+agent = STEMLearningAgent()
 
 # Example instantiation (customize as needed)
 if __name__ == "__main__":
     # Initialize the agent with empty memory
-    agent = STEMLearningAgent()
+    
     
     print("🤖 Welcome to Gauss, your STEM learning assistant!")
     print("Type 'exit' or 'quit' to end the conversation.\n")
