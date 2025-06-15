@@ -62,6 +62,12 @@ class Chunker:
             full_text = header_prefix + "\n" + body if header_prefix else body
             chunks.append(full_text.strip())
 
+    def _match_header(self, line: str) -> Tuple[int, str] | None:
+        match = re.match(r"^(#{1,6})\s+(.*)", line)
+        if match:
+            return len(match.group(1)), match.group(2).strip()
+        return None
+
     def chunk_markdown_with_headers(self, md_path: str, max_chars: int = 2000) -> List[str]:
         """Chunk markdown en respectant la hiérarchie des headers pour chaque chunk."""
         print(f"Splitting markdown with header context: {md_path}")
