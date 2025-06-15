@@ -1,0 +1,109 @@
+/* Theme variables */
+:root {
+    --bg: #f3f4f6;
+    --bg-secondary: #fff;
+    --text: #1a202c;
+    --text-secondary: #4b5563;
+    --primary: #6366f1;
+    --primary-hover: #4f46e5;
+    --file-bg: #f8f9fa;
+    --file-bg-hover: #e9ecef;
+}
+
+body {
+    background-color: var(--bg);
+    color: var(--text);
+    transition: background 0.3s, color 0.3s;
+}
+
+.dark {
+    --bg: #18181b;
+    --bg-secondary: #23272f;
+    --text: #f3f4f6;
+    --text-secondary: #a1a1aa;
+    --primary: #818cf8;
+    --primary-hover: #6366f1;
+    --file-bg: #23272f;
+    --file-bg-hover: #18181b;
+}
+
+.bg-gray-100 { background-color: var(--bg) !important; }
+.bg-white { background-color: var(--bg-secondary) !important; }
+.text-gray-700 { color: var(--text-secondary) !important; }
+.text-gray-800 { color: var(--text) !important; }
+.text-gray-200 { color: var(--text-secondary) !important; }
+.bg-indigo-600 { background-color: var(--primary) !important; }
+.bg-indigo-700 { background-color: var(--primary-hover) !important; }
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Chat message styles */
+.message {
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+    max-width: 80%;
+    background-color: var(--file-bg);
+    color: var(--text);
+}
+
+.message.user {
+    background-color: var(--primary);
+    color: #fff;
+    margin-left: auto;
+}
+
+.message.assistant {
+    background-color: var(--file-bg);
+    color: var(--text);
+    margin-right: auto;
+}
+
+/* File list styles */
+.file-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    background-color: var(--file-bg);
+    margin-bottom: 0.5rem;
+    color: var(--text);
+}
+
+.file-item:hover {
+    background-color: var(--file-bg-hover);
+}
+
+/* Loading animation */
+.loading {
+    display: inline-block;
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 3px solid #f3f3f3;
+    border-radius: 50%;
+    border-top: 3px solid var(--primary);
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+} 
