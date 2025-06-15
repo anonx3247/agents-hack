@@ -5,7 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Math Study Assistant</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 </head>
 <body class="bg-gray-100 transition-colors duration-300">
     <div class="container mx-auto px-4 py-8">
@@ -60,6 +63,19 @@
             <div class="md:col-span-2 bg-white rounded-lg shadow p-6">
                 <h2 class="text-2xl font-bold mb-4">Chat with AI Assistant</h2>
                 <div id="chatMessages" class="h-96 overflow-y-auto mb-4 space-y-4"></div>
+                <div id="loadingIndicator" class="hidden flex items-center space-x-2 mb-4">
+                    <div class="typing-indicator">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                    <span class="text-gray-600 dark:text-gray-400">Agent is thinking...</span>
+                </div>
+                <div class="flex justify-between items-center mb-4">
+                    <button id="newConversationButton" class="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                        New Conversation
+                    </button>
+                </div>
                 <form id="chatForm" class="flex space-x-4">
                     <input type="text" id="messageInput" class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Type your message...">
                     <button type="submit" class="bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">

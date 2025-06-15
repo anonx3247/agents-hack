@@ -62,6 +62,12 @@ body {
     max-width: 80%;
     background-color: var(--file-bg);
     color: var(--text);
+    white-space: pre-wrap;
+    line-height: 1.5;
+}
+
+.message br {
+    margin-bottom: 0.5em;
 }
 
 .message.user {
@@ -106,4 +112,63 @@ body {
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+/* LaTeX equation styles */
+.message .katex-display {
+    margin: 1em 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+.message .katex {
+    font-size: 1.1em;
+}
+
+.message .katex-html {
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+/* Ensure equations don't overflow on mobile */
+@media (max-width: 640px) {
+    .message .katex-display {
+        font-size: 0.9em;
+    }
+}
+
+/* Typing indicator animation */
+.typing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.typing-indicator span {
+    width: 8px;
+    height: 8px;
+    background-color: var(--primary);
+    border-radius: 50%;
+    animation: typing 1s infinite ease-in-out;
+}
+
+.typing-indicator span:nth-child(1) {
+    animation-delay: 0.2s;
+}
+
+.typing-indicator span:nth-child(2) {
+    animation-delay: 0.3s;
+}
+
+.typing-indicator span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes typing {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-6px);
+    }
 } 
