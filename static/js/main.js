@@ -5,10 +5,40 @@ document.addEventListener('DOMContentLoaded', function() {
     const chatMessages = document.getElementById('chatMessages');
     const coursList = document.getElementById('coursList');
     const exosList = document.getElementById('exosList');
+    const newConversationButton = document.getElementById('newConversationButton');
+
+    let messageCount = 0;
 
     // Load initial file lists
     loadFiles('cours');
     loadFiles('exos');
+
+    // Handle new conversation button click
+    newConversationButton.addEventListener('click', async function() {
+        // First save the current conversation
+        try {
+            const saveResponse = await fetch('/save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (saveResponse.ok) {
+                // Clear the chat messages
+                chatMessages.innerHTML = '';
+                messageCount = 0;
+                // Add a welcome message
+                addMessage('New conversation started. How can I help you?', 'assistant');
+            } else {
+                const errorData = await saveResponse.json();
+                alert('Error saving conversation: ' + (errorData.error || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Save error:', error);
+            alert('Error saving conversation: ' + error.message);
+        }
+    });
 
     // Handle file upload
     uploadForm.addEventListener('submit', async function(e) {
@@ -43,6 +73,11 @@ document.addEventListener('DOMContentLoaded', function() {
         // Add user message to chat
         addMessage(message, 'user');
         messageInput.value = '';
+        messageCount++;
+
+        // Show loading indicator
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        loadingIndicator.classList.remove('hidden');
 
         try {
             const response = await fetch('/chat', {
@@ -56,11 +91,33 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await response.json();
             if (response.ok) {
                 addMessage(data.response, 'assistant');
+                messageCount++;
+
+                // Auto-save every 10 messages
+                if (messageCount >= 10) {
+                    messageCount = 0;
+                    try {
+                        const saveResponse = await fetch('/save', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                        if (saveResponse.ok) {
+                            console.log('Conversation auto-saved');
+                        }
+                    } catch (error) {
+                        console.error('Error auto-saving conversation:', error);
+                    }
+                }
             } else {
                 addMessage('Error: Could not get response from AI', 'assistant');
             }
         } catch (error) {
             addMessage('Error: ' + error.message, 'assistant');
+        } finally {
+            // Hide loading indicator
+            loadingIndicator.classList.add('hidden');
         }
     });
 
@@ -91,9 +148,22 @@ document.addEventListener('DOMContentLoaded', function() {
     function addMessage(text, type) {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${type}`;
-        messageDiv.textContent = text;
+        // Convert newlines to <br> tags while preserving other HTML
+        const formattedText = text.replace(/\n/g, '<br>');
+        messageDiv.innerHTML = formattedText;
         chatMessages.appendChild(messageDiv);
         chatMessages.scrollTop = chatMessages.scrollHeight;
+        
+        // Render LaTeX in the new message
+        renderMathInElement(messageDiv, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false},
+                {left: '\\(', right: '\\)', display: false},
+                {left: '\\[', right: '\\]', display: true}
+            ],
+            throwOnError: false
+        });
     }
 
     // Format file size
