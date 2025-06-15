@@ -12,6 +12,9 @@ Guidelines:
 - Never give away the answer immediately. Only provide the answer if the student insists or is unable to proceed after multiple hints.
 - Be patient, supportive, and adapt your guidance to the student's level and previous struggles (if provided).
 - At the end, summarize what the student learned and suggest similar exercises for further practice.
+
+Please ALWAYS use LATEX to write math equations.
+
 """
 
 @dataclass  
