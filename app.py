@@ -129,6 +129,19 @@ def chat():
     response = agent.run(message)
     return jsonify({'response': response})
 
+@app.route('/save', methods=['POST'])
+def save():
+    try:
+        # Make sure we have access to the agent's memories
+        if not hasattr(agent, 'memories'):
+            return jsonify({'error': 'Agent memories not initialized'}), 500
+            
+        save_memories()
+        return jsonify({'message': 'Memories saved successfully'}), 200
+    except Exception as e:
+        print(f"Error saving memories: {str(e)}")  # Add logging
+        return jsonify({'error': str(e)}), 500
+
 # Vectorize existing files on startup
 vectorize_existing_files()
 
