@@ -57,22 +57,6 @@ def add_exercise(exercise: Exercise) -> None:
     """
     _exercise_db[exercise.id] = exercise
 
-@tool
-def consult_hints(exercise_id: str) -> str:
-    """
-    Retrieve and return the hints for a specific exercise.
-    
-    Args:
-        exercise_id (str): The ID of the exercise to get hints for
-        
-    Returns:
-        str: The hints for the exercise if found, or an error message if not found
-    """
-    exercise = get_exercise(exercise_id)
-    if not exercise:
-        return f"Exercise {exercise_id} not found."
-    return f"Here are some hints for the exercise: {exercise.hints}"
-
 def consult_solution(exercise_id: str) -> str:
     """
     Retrieve and return the solution for a specific exercise.
@@ -116,7 +100,6 @@ class ExerciseTrainerAgent(MultiStepAgent):
         )
         
         tools = [
-            consult_hints,
             consult_solution
         ]
 
