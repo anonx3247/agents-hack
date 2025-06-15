@@ -11,7 +11,7 @@ from smolagents import ToolCallingAgent, tool, WikipediaSearchTool, LiteLLMModel
 # Add this import for Claude Sonnet 4 model integration
 # from smolagents import LiteLLMModel
 from agents.memory_agent import update_memory
-from agents.exercise_trainer_agent import ExerciseTrainerAgent, Exercise
+from agents.exercise_trainer_agent import ExerciseTrainerAgent
 from agents.exercise_summarizer import summarize_exercises
 from langchain_community.vectorstores import Chroma
 from langchain.embeddings import HuggingFaceEmbeddings
@@ -121,18 +121,19 @@ def exercise_search(topic: str, problem_types: list = None) -> str:
     return f"Relevant exercises:\n{formatted_exercises}"
 
 @tool
-def train_on_exercise(exercise_id: str) -> str:
+def train_on_exercise(problem: str, solution: str) -> str:
     """
     Launch a guided, step-by-step training session with the student on the given exercise. Do not reveal the answer unless the student is truly stuck and requests it as a last resort. Guide the student slowly, asking questions and providing hints as needed.
     
     Args:
-        exercise_id (str): The ID of the exercise to work through with the student
+        problem (str): The problem to work through with the student
+        solution (str): The solution to the problem
         
     Returns:
         str: Initial prompt to start the guided training session
     """
     
-    trainer = ExerciseTrainerAgent(exercise_id=exercise_id)
+    # Initialize the ExerciseTrainerAgent with the problem and solution
     return trainer.run()
 
 def save_memories() -> str:
@@ -171,6 +172,8 @@ class STEMLearningAgent(ToolCallingAgent):
             model="claude-opus-4-20250514",
             api_key="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"
         )
+
+        self.trainer = ExerciseTrainerAgent()
         
         tools = [
             doc_research,
@@ -191,7 +194,8 @@ class STEMLearningAgent(ToolCallingAgent):
             model=model,
             *args, 
             **kwargs,
-            max_steps=3
+            max_steps=3,
+            managed_agents=[self.trainer]
         )
 
         

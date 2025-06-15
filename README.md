@@ -22,17 +22,24 @@ source venv/bin/activate  # On Windows, use: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-3. Run the application:
+3. Run the ingestion process to prepare the documents:
 ```bash
-streamlit run app.py
+python -m ingestion.ingest_pipeline --source pb-solution
+python -m ingestion.ingest_pipeline --source clas-notes
+```
+
+4. Run the application:
+```bash
+python app.py
 ```
 
 ## Usage
 
-1. The application will open in your default web browser
-2. Use the sidebar to upload lesson and exercise documents
-3. Chat with the assistant in the main interface
-4. Uploaded files are automatically categorized and stored in the `uploads` directory
+1. First, ensure you've run the ingestion process (`python -m ingest.ingest`) to prepare your documents
+2. The application will open in your default web browser
+3. Use the sidebar to upload lesson and exercise documents
+4. Chat with the assistant in the main interface
+5. Uploaded files are automatically categorized and stored in the `uploads` directory
 
 ## File Structure
 
