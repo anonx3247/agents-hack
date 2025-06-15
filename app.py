@@ -41,8 +41,23 @@ def vectorize_file(file_path, file_type):
             source_type = 'pdf'
         elif os.path.dirname(file_path) == EXOS_FOLDER:
             source_type = 'exos'
+            # For exercises, we need to create or append to exos.md
+            exos_md_path = os.path.join(EXOS_FOLDER, 'exos.md')
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            with open(exos_md_path, 'a', encoding='utf-8') as f:
+                f.write('\n\n' + content)
+            file_path = exos_md_path
         else:
             source_type = 'class-notes'
+            # For class notes, ensure they're in markdown format
+            if not file_path.endswith('.md'):
+                md_path = os.path.join(MARKDOWN_DIR, os.path.splitext(os.path.basename(file_path))[0] + '.md')
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                with open(md_path, 'w', encoding='utf-8') as f:
+                    f.write(content)
+                file_path = md_path
 
         # Create pipeline instance with default values if env vars are not set
         pipeline = Pipeline(
