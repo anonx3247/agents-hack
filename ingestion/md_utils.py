@@ -1,7 +1,8 @@
-from typing import List
+from typing import List, Tuple
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from markitdown import MarkItDown
 from pathlib import Path
+import re
 
 class PDFLoader:
     def __init__(self, pdf_dir: str):
@@ -32,15 +33,75 @@ class MarkdownConverter:
 
 class Chunker:
     def __init__(self, chunk_size=512, chunk_overlap=50):
+        self.chunk_size = chunk_size
+        self.chunk_overlap = chunk_overlap
         self.splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap
         )
 
-    def chunk_markdown(self, md_path: str):
+    def chunk_markdown(self, md_path: str) -> List[str]:
+        """Chunk basique avec découpe uniforme par longueur"""
         print(f"Splitting markdown into chunks: {md_path}")
         with open(md_path, "r", encoding="utf-8") as f:
             text = f.read()
         chunks = self.splitter.split_text(text)
-        print(f"Generated {len(chunks)} chunk(s)")
+        print(f"{len(chunks)} chunk(s)")
+        return chunks
+
+    def chunk_exercises(self, content: str) -> List[str]:
+        """Chunk par exercice avec reconnaissance des balises [Exercice n]{.smallcaps}"""
+        pattern = r"(\[Exercice\s+\d+\]\{\.smallcaps\}.*?)((?=\[Exercice\s+\d+\]\{\.smallcaps\})|$)"
+        matches = re.findall(pattern, content, re.DOTALL)
+        return [match[0].strip() for match in matches]
+
+    def chunk_exercises(self, content: str) -> List[str]:
+        """Chunk par exercice avec reconnaissance des balises [Exercice n]{.smallcaps}"""
+        pattern = r"(\[Exercice\s+\d+\]\{\.smallcaps\}.*?)((?=\[Exercice\s+\d+\]\{\.smallcaps\})|$)"
+        matches = re.findall(pattern, content, re.DOTALL)
+        return [match[0].strip() for match in matches]
+
+    def _flush_chunk(self, headers: List[Tuple[int, str]], lines: List[str], chunks: List[str]):
+        if lines:
+            header_prefix = "\n".join(f"{'#' * level} {text}" for level, text in headers)
+            body = "\n".join(lines)
+            full_text = header_prefix + "\n" + body if header_prefix else body
+            chunks.append(full_text.strip())
+
+    def chunk_markdown_with_headers(self, md_path: str, max_chars: int = 2000) -> List[str]:
+        """Chunk markdown en respectant la hiérarchie des headers pour chaque chunk."""
+        print(f"Splitting markdown with header context: {md_path}")
+        with open(md_path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        lines = content.splitlines()
+        chunks = []
+        current_headers: List[Tuple[int, str]] = []
+        current_chunk_lines: List[str] = []
+
+        for line in lines:
+            header = self._match_header(line)
+            if header:
+                if current_chunk_lines:
+                    self._flush_chunk(current_headers, current_chunk_lines, chunks)
+                    current_chunk_lines = []
+                level, text = header
+                current_headers = [(l, t) for l, t in current_headers if l < level]
+                current_headers.append((level, text))
+                current_chunk_lines.append(line)
+            else:
+                current_chunk_lines.append(line)
+                temp_chunk = "\n".join(f"{'#' * level} {text}" for level, text in current_headers)
+                temp_chunk += "\n" + "\n".join(current_chunk_lines)
+                if len(temp_chunk) > max_chars:
+                    if len(current_chunk_lines) > 1:
+                        current_chunk_lines.pop()
+                        self._flush_chunk(current_headers, current_chunk_lines, chunks)
+                        current_chunk_lines = [line]
+                    else:
+                        self._flush_chunk(current_headers, current_chunk_lines, chunks)
+                        current_chunk_lines = [line]
+
+        self._flush_chunk(current_headers, current_chunk_lines, chunks)
+        print(f"{len(chunks)} chunk(s) with header context")
         return chunks

@@ -5,8 +5,7 @@ from md_utils import PDFLoader, MarkdownConverter, Chunker
 from db_loader import VectorStoreLoader
 import argparse
 
-
-class RAGPipeline:
+class Pipeline:
     def __init__(
         self,
         source_type: str,
@@ -34,29 +33,47 @@ class RAGPipeline:
             for pdf_path in pdf_paths:
                 md_path = self.converter.convert_pdf_to_markdown(pdf_path)
                 md_paths.append(md_path)
-        elif self.source_type == "markdown":
-            md_paths = list(Path(self.source_dir).glob("*.md"))
+
+            chunks = []
+            for md_path in md_paths:
+                chunks += self.chunker.chunk_markdown(md_path)
+            collection_name = "pdfs"
+
+        elif self.source_type == "class-notes":
+            class_notes_dir = Path(self.source_dir) / "class-notes"
+            md_paths = list(class_notes_dir.glob("*.md"))
             md_paths = [str(p) for p in md_paths]
-            print(f"Found {len(md_paths)} markdown file(s) in {self.source_dir}")
+            print(f"Found {len(md_paths)} markdown file(s) in {class_notes_dir}")
+
+            chunks = []
+            for md_path in md_paths:
+                chunks += self.chunker.chunk_markdown_with_headers(md_path)
+            collection_name = "class-notes"
+
+        elif self.source_type == "exos":
+            exos_md = Path(self.source_dir) / "exos.md"
+            if not exos_md.exists():
+                raise FileNotFoundError(f"Le fichier exos.md est introuvable dans {self.source_dir}")
+            
+            chunks = self.chunker.chunk_exercises(exos_md.read_text(encoding="utf-8"))
+            collection_name = "exos"
         else:
             raise ValueError(f"Unknown source_type: {self.source_type}")
 
-        for md_path in md_paths:
-            chunks = self.chunker.chunk_markdown(md_path)
-            self.vectorstore.add_documents(chunks, metadata={"source": md_path})
+        self.vectorstore.add_documents(chunks, collection_name=collection_name)
 
         print("Ingestion completed.")
 
-# python ./ingestion/ingest_pipeline.py --source [pdf|markdown]
+# python ./ingestion/ingest_pipeline.py --source [pdf|class-notes|exos]
 if __name__ == "__main__":
     load_dotenv()
 
-    parser = argparse.ArgumentParser(description="Run RAG ingestion pipeline.")
+    parser = argparse.ArgumentParser(description="Run document ingestion pipeline.")
     parser.add_argument(
         "--source", 
-        choices=["pdf", "markdown"], 
+        choices=["pdf", "class-notes", "exos"], 
         required=True, 
-        help="Data source type: 'pdf' to extract from PDFs, 'markdown' to use existing markdown files."
+        help="Data source type: 'pdf' to extract from PDFs, 'class-notes' or 'exos' to use existing markdown files."
     )
     args = parser.parse_args()
 
@@ -64,7 +81,7 @@ if __name__ == "__main__":
     source_type = args.source
     source_dir = os.getenv("PDF_DIR") if source_type == "pdf" else os.getenv("MARKDOWN_DIR")
 
-    pipeline = RAGPipeline(
+    pipeline = Pipeline(
         source_type=source_type,
         source_dir=source_dir,
         md_dir=os.getenv("MARKDOWN_DIR"),
