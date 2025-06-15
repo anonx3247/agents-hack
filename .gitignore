@@ -194,11 +194,6 @@ cython_debug/
 .cursorindexingignore
 
 # Data 
-/ingestion/data/pdfs/*
-!pdfs/.gitkeep
-
-/ingestion/data/markdowns/*
-!markdowns/.gitkeep
 
 /ingestion/chroma_db/*
 !chroma_db/.gitkeep
