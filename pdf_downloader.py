@@ -25,7 +25,7 @@ directories = {
     ],
     "exos": [
         "http://mletournel.free.fr/suites_normes_exe.pdf",
-        "http://mletournel.free.fr/series_exe.pdf"
+        "http://mletournel.free.fr/series_exe.pdf",
         "http://mletournel.free.fr/series_complement_exe.pdf",
         "http://mletournel.free.fr/familles_sommables_exe.pdf",
         "https://www.xif.fr/public/pr%C3%A9pas-dupuy-de-l%C3%B4me-maths/exos.zip"
