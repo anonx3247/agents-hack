@@ -33,16 +33,6 @@ notes_db = Chroma(
     persist_directory=os.getenv("CHROMA_DB_DIR")
 )
 
-# Placeholder imports for ChromaDB and memory handling
-# from chromadb import Client as ChromaClient
-# import memory_utils
-
-# Initialize connections to your vector DBs and memory file here
-# notes_db = ChromaClient(...)
-# docs_db = ChromaClient(...)
-# problems_db = ChromaClient(...)
-# memory_file = 'path/to/memory.json'
-
 AGENT_SYSTEM_PROMPT = """
 You are Gauss, a specialized STEM learning assistant for students. You are helpful, patient, and always take a step-by-step approach to teaching. Your goal is to help students truly understand concepts, not just get answers.
 
@@ -56,36 +46,11 @@ Guidelines:
 - Never give away answers immediately. Instead, break down problems, ask guiding questions, and help the student build understanding incrementally.
 - If the student is struggling, offer hints or break the problem into smaller parts.
 - Only provide the final answer if the student insists or is unable to proceed after multiple hints.
-"""
 
-PLANNING_PROMPT = """
-Let's break down the student's request and plan how to help them:
-
-1. What is the student asking for?
-2. What tools might be helpful?
-3. What approach should we take?
-
-Let's think step by step.
-"""
-
-FINAL_ANSWER_PROMPT = """
-Based on our interaction, here's what I've learned and how I can help:
-
-1. The student's request: {request}
-2. The approach we took: {approach}
-3. The outcome: {outcome}
-
-Let me provide a clear, helpful response.
-"""
-
-MANAGED_AGENT_PROMPT = """
-You are managing a STEM learning session. Your role is to:
-1. Understand the student's needs
-2. Choose appropriate tools and approaches
-3. Guide the student through the learning process
-4. Ensure they understand the concepts
-
-Remember to be patient, encouraging, and adapt to the student's level.
+DO NOT TRAIN ON A SPECIFIC EXERCISE BEFORE THE STUDENT HAS ASKED TO DO SO.
+DO NOT USE THE DOCUMENTATION TOOL UNLESS THE STUDENT HAS ASKED A QUESTION ABOUT THE COURSE.
+DO NOT USE THE EXERCISE SEARCH TOOL UNLESS THE STUDENT HAS ASKED TO PRACTICE.
+DO NOT USE THE WIKIPEDIA TOOL UNLESS THE STUDENT HAS ASKED A QUESTION ABOUT A TOPIC NOT COVERED IN THE COURSE.
 """
 
 @tool
@@ -152,7 +117,6 @@ def train_on_exercise(exercise_id: str) -> str:
     trainer = ExerciseTrainerAgent(exercise_id=exercise_id)
     return trainer.run()
 
-@tool
 def save_memories() -> str:
     """
     Delegate to the summary agent to summarize the conversation and update the memory file.
@@ -194,7 +158,6 @@ class STEMLearningAgent(ToolCallingAgent):
             doc_research,
             exercise_search,
             train_on_exercise,
-            save_memories,
             WikipediaSearchTool(
                 user_agent="STEMLearningAgent (your@email.com)",
                 language="en",
@@ -236,12 +199,10 @@ class STEMLearningAgent(ToolCallingAgent):
         print("\n🤔 Thinking...")
         return super().run(user_input)
 
-agent = STEMLearningAgent()
-
 # Example instantiation (customize as needed)
 if __name__ == "__main__":
     # Initialize the agent with empty memory
-    agent = STEMLearningAgent(memory_summary="")
+    agent = STEMLearningAgent()
     
     print("🤖 Welcome to Gauss, your STEM learning assistant!")
     print("Type 'exit' or 'quit' to end the conversation.\n")
@@ -252,6 +213,7 @@ if __name__ == "__main__":
         
         # Check for exit command
         if user_input.lower() in ['exit', 'quit']:
+            save_memories()
             print("\nGoodbye! Have a great day of learning! 👋")
             break
             

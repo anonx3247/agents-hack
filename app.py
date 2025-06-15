@@ -1,107 +1,136 @@
-import streamlit as st
+from flask import Flask, render_template, request, jsonify, send_from_directory
 import os
-from datetime import datetime
+from werkzeug.utils import secure_filename
+import json
+from pathlib import Path
+from ingestion.ingest_pipeline import Pipeline
+from dotenv import load_dotenv
+from agents.main_agent import STEMLearningAgent, save_memories
+# Load environment variables
 
-# Set page config
-st.set_page_config(
-    page_title="Math Study Assistant",
-    page_icon="📚",
-    layout="wide"
-)
+agent = STEMLearningAgent()
 
-# Initialize session state for chat history
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+load_dotenv()
 
-# Initialize session state for uploaded files
-if "uploaded_files" not in st.session_state:
-    st.session_state.uploaded_files = {
-        "cours": [],
-        "exos": []
-    }
+app = Flask(__name__)
 
-# Create directories if they don't exist
-os.makedirs("uploads/cours", exist_ok=True)
-os.makedirs("uploads/exos", exist_ok=True)
+# Configuration
+UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)))
+COURS_FOLDER = os.path.join(UPLOAD_FOLDER, 'cours')
+EXOS_FOLDER = os.path.join(UPLOAD_FOLDER, 'exos')
+MARKDOWN_DIR = os.path.join(UPLOAD_FOLDER, 'markdown')
+CHROMA_DB_DIR = os.path.join(UPLOAD_FOLDER, 'chroma_db')
 
-# Sidebar for file upload
-with st.sidebar:
-    st.title("📚 Document Management")
+# Ensure directories exist
+os.makedirs(COURS_FOLDER, exist_ok=True)
+os.makedirs(EXOS_FOLDER, exist_ok=True)
+os.makedirs(MARKDOWN_DIR, exist_ok=True)
+os.makedirs(CHROMA_DB_DIR, exist_ok=True)
+
+# Allowed file extensions
+ALLOWED_EXTENSIONS = {'pdf', 'txt', 'md', 'docx', 'doc'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def vectorize_file(file_path, file_type):
+    """Vectorize a file based on its type and location."""
+    try:
+        # Determine source type based on file extension and location
+        if file_path.endswith('.pdf'):
+            source_type = 'pdf'
+        elif os.path.dirname(file_path) == EXOS_FOLDER:
+            source_type = 'exos'
+        else:
+            source_type = 'class-notes'
+
+        # Create pipeline instance with default values if env vars are not set
+        pipeline = Pipeline(
+            source_type=source_type,
+            source_dir=os.path.dirname(file_path),
+            md_dir=MARKDOWN_DIR,
+            db_dir=CHROMA_DB_DIR,
+            embedding_model=os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2"),
+            chunk_size=int(os.getenv("CHUNK_SIZE", "512")),
+            chunk_overlap=int(os.getenv("CHUNK_OVERLAP", "50"))
+        )
+
+        # Run pipeline
+        pipeline.run()
+        return True
+    except Exception as e:
+        print(f"Error vectorizing file {file_path}: {str(e)}")
+        return False
+
+def vectorize_existing_files():
+    """Vectorize all existing files in cours and exos directories."""
+    print("Vectorizing existing files...")
     
-    # File upload section for lessons
-    st.subheader("Upload Lessons")
-    cours_files = st.file_uploader(
-        "Upload lesson documents",
-        type=["pdf", "txt", "docx"],
-        key="cours_uploader",
-        accept_multiple_files=True
-    )
+    # Vectorize files in cours directory
+    for filename in os.listdir(COURS_FOLDER):
+        if allowed_file(filename):
+            file_path = os.path.join(COURS_FOLDER, filename)
+            vectorize_file(file_path, 'cours')
     
-    # File upload section for exercises
-    st.subheader("Upload Exercises")
-    exos_files = st.file_uploader(
-        "Upload exercise documents",
-        type=["pdf", "txt", "docx"],
-        key="exos_uploader",
-        accept_multiple_files=True
-    )
-    
-    # Display uploaded files
-    st.subheader("Uploaded Files")
-    
-    st.write("**Lessons:**")
-    for file in st.session_state.uploaded_files["cours"]:
-        st.write(f"- {file}")
-    
-    st.write("**Exercises:**")
-    for file in st.session_state.uploaded_files["exos"]:
-        st.write(f"- {file}")
+    # Vectorize files in exos directory
+    for filename in os.listdir(EXOS_FOLDER):
+        if allowed_file(filename):
+            file_path = os.path.join(EXOS_FOLDER, filename)
+            vectorize_file(file_path, 'exos')
 
-# Main chat interface
-st.title("🤖 Math Study Assistant")
+@app.route('/')
+def index():
+    return render_template('index.html')
 
-# Display chat messages
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.write(message["content"])
-
-# Chat input
-if prompt := st.chat_input("Ask your question here..."):
-    # Add user message to chat history
-    st.session_state.messages.append({"role": "user", "content": prompt})
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
     
-    # Display user message
-    with st.chat_message("user"):
-        st.write(prompt)
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
     
-    # Display assistant response (placeholder for now)
-    with st.chat_message("assistant"):
-        response = "I'm your math study assistant! I can help you with your questions and analyze your uploaded documents. What would you like to know?"
-        st.write(response)
-        st.session_state.messages.append({"role": "assistant", "content": response})
-
-# Handle file uploads
-def save_uploaded_files(uploaded_files, category):
-    for uploaded_file in uploaded_files:
-        if uploaded_file is not None:
-            # Create a unique filename
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"{timestamp}_{uploaded_file.name}"
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        # Determine which folder to save to based on the upload type
+        folder = COURS_FOLDER if request.form.get('type') == 'cours' else EXOS_FOLDER
+        file_path = os.path.join(folder, filename)
+        file.save(file_path)
+        
+        # Vectorize the uploaded file
+        success = vectorize_file(file_path, request.form.get('type'))
+        if not success:
+            return jsonify({'error': 'Error vectorizing file'}), 500
             
-            # Save the file
-            file_path = os.path.join("uploads", category, filename)
-            with open(file_path, "wb") as f:
-                f.write(uploaded_file.getbuffer())
-            
-            # Add to session state
-            if filename not in st.session_state.uploaded_files[category]:
-                st.session_state.uploaded_files[category].append(filename)
+        return jsonify({'message': 'File uploaded and vectorized successfully', 'filename': filename})
+    
+    return jsonify({'error': 'File type not allowed'}), 400
 
-# Process new file uploads
-if cours_files:
-    save_uploaded_files(cours_files, "cours")
-    st.rerun()
+@app.route('/files/<type>')
+def list_files(type):
+    folder = COURS_FOLDER if type == 'cours' else EXOS_FOLDER
+    files = []
+    for filename in os.listdir(folder):
+        if allowed_file(filename):
+            files.append({
+                'name': filename,
+                'size': os.path.getsize(os.path.join(folder, filename)),
+                'modified': os.path.getmtime(os.path.join(folder, filename))
+            })
+    return jsonify(files)
 
-if exos_files:
-    save_uploaded_files(exos_files, "exos")
-    st.rerun() 
+@app.route('/chat', methods=['POST'])
+def chat():
+    data = request.json
+    message = data.get('message')
+    # Here you would integrate with your AI agent
+    # For now, we'll just echo back
+    response = agent.run(message)
+    return jsonify({'response': response})
+
+# Vectorize existing files on startup
+vectorize_existing_files()
+
+if __name__ == '__main__':
+    app.run(debug=True) 

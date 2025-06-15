@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Study Assistant</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="bg-gray-100 transition-colors duration-300">
+    <div class="container mx-auto px-4 py-8">
+        <div class="flex justify-end mb-4">
+            <button id="themeToggle" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                Toggle Dark/Light Mode
+            </button>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- File Upload Section -->
+            <div class="md:col-span-1 bg-white rounded-lg shadow p-6">
+                <h2 class="text-2xl font-bold mb-4">File Management</h2>
+                
+                <!-- Upload Form -->
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold mb-2">Upload Files</h3>
+                    <form id="uploadForm" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">File Type</label>
+                            <select name="type" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <option value="cours">Lesson</option>
+                                <option value="exos">Exercise</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">File</label>
+                            <input type="file" name="file" class="mt-1 block w-full" required>
+                        </div>
+                        <button type="submit" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                            Upload
+                        </button>
+                    </form>
+                </div>
+
+                <!-- File List -->
+                <div>
+                    <h3 class="text-lg font-semibold mb-2">Uploaded Files</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <h4 class="font-medium text-gray-700">Lessons</h4>
+                            <ul id="coursList" class="mt-2 space-y-2"></ul>
+                        </div>
+                        <div>
+                            <h4 class="font-medium text-gray-700">Exercises</h4>
+                            <ul id="exosList" class="mt-2 space-y-2"></ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Section -->
+            <div class="md:col-span-2 bg-white rounded-lg shadow p-6">
+                <h2 class="text-2xl font-bold mb-4">Chat with AI Assistant</h2>
+                <div id="chatMessages" class="h-96 overflow-y-auto mb-4 space-y-4"></div>
+                <form id="chatForm" class="flex space-x-4">
+                    <input type="text" id="messageInput" class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Type your message...">
+                    <button type="submit" class="bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                        Send
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html> 
