@@ -49,6 +49,9 @@ def add_exercise(exercise: Exercise) -> None:
 def consult_hints(exercise_id: str) -> str:
     """
     Consult the tips for the given exercise.
+
+    Args:
+        exercise_id (str): The ID of the exercise to consult hints for
     """
     exercise = get_exercise(exercise_id)
     if not exercise:
